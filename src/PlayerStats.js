@@ -13,12 +13,7 @@ const PlayerStats = ({ playerName }) => {
 
   const fetchStats = async () => {
     const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?seasons[]=2022&player_ids[]=${playerData[0].id}&sort=-game.date`);
-        console.log("Lebron stats: ", response);
 
-        const test1 = response.data.data;
-        console.log("Lebron before sort: ", test1);
-        const test2 = new Date(response.data.data[0].game.date);
-        console.log("Lebron test: ", test2);
         const stats = response.data.data.reduce((acc, curr) => {
           const date = new Date(curr.game.date).getTime();
           const index = acc.findIndex(item => new Date(item.game.date).getTime() < date);
@@ -29,7 +24,6 @@ const PlayerStats = ({ playerName }) => {
           }
           return acc;
         }, []);
-        console.log("Lebron after sort: ", stats);
         setStats(stats);
         
         // setStats(response.data);
@@ -55,21 +49,19 @@ const PlayerStats = ({ playerName }) => {
   const { first_name = null, last_name = null, team = null } = playerData[0] || {};
   const statsArray = Object.values(stats);
   console.log("stats array: ", statsArray);
-  console.log("stats: ", stats);
   const playerStats = statsArray.slice(0, 10);
+  console.log("Lebron Last 10 games: ", playerStats);
   
   return (
     <div>
       <p>
-        {first_name} {last_name}
-        {stats[0].id}
+        {first_name} {last_name} Last 10 Games:
       </p>
 
       <table>
         <thead>
           <tr>
             <th>Date</th>
-            <th>Opponent</th>
             <th>Points</th>
             <th>Rebounds</th>
             <th>Assists</th>
@@ -78,10 +70,9 @@ const PlayerStats = ({ playerName }) => {
           </tr>
         </thead>
         <tbody>
-          {Array.isArray(playerStats[0]) && playerStats[0].slice(playerStats[0].length-10, playerStats[0].length).map((stats, index) => (
+          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
             <tr key={stats.id}>
               <td>{stats.game.date.substring(0,10)}</td>
-              <td>{stats.game.opponent}</td>
               <td>{stats.pts}</td>
               <td>{stats.reb}</td>
               <td>{stats.ast}</td>
