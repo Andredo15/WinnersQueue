@@ -10,10 +10,10 @@ function App() {
     const playerName = "Lebron James";
 
     const getTodaysGames = () => {
-        Axios.get("http://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard")
+        Axios.get("https://www.balldontlie.io/api/v1/games?start_date=2023-02-25&end_date=2023-02-25")
             .then((response) => {
-                console.log(response);
-                setMatchUps(response.data.events);
+                console.log("NEW API CALL: ", response);
+                setMatchUps(response.data.data);
             });
     };
 
@@ -27,7 +27,7 @@ function App() {
                 matchUps.map(matchUps => {
                     return(
                        <div className="data" key={matchUps.id}>
-                         <h3>{matchUps.name}</h3>
+                         <h3>{matchUps.visitor_team.name + " at " + matchUps.home_team.name }</h3>
                        </div>
                     )
                 }) : <h3>No data yet</h3> }

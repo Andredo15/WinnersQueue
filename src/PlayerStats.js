@@ -25,13 +25,6 @@ const PlayerStats = ({ playerName }) => {
           return acc;
         }, []);
         setStats(stats);
-        
-        // setStats(response.data);
-  };
-
-  const getTeamName = async (teamId) => {
-    const response = await Axios.get(`https://www.balldontlie.io/api/v1/teams/${teamId}`);
-    return response.data.full_name;
   };
 
   useEffect(() => {
@@ -55,7 +48,7 @@ const PlayerStats = ({ playerName }) => {
   return (
     <div>
       <p>
-        {first_name} {last_name} Last 10 Games:
+        {first_name} {last_name} {"(" + playerStats[0].player.position + ")"} Last 10 Games:
       </p>
 
       <table>
