@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
 import Axios from 'axios';
 
-const PlayerStats = ({ playerName }) => {
-  const [playerData, setPlayerData] = useState(null);
+const GameStats = ({ GameId }) => {
+  const [playerData, setGameData] = useState(null);
   const [stats, setStats] = useState("");
 
-  const fetchPlayerData = async (playerName) => {
-    const response = await Axios.get(`https://www.balldontlie.io/api/v1/players?search=${playerName}`);
+  const fetchPlayerData = async (GameId) => {
+    const response = await Axios.get(`https://www.balldontlie.io/api/v1/games/${GameId}`);
     console.log(response);
-    setPlayerData(response.data.data);
+    setGameData(response.data.data);
   };
-
+/*
   const fetchStats = async () => {
     const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?seasons[]=2022&player_ids[]=${playerData[0].id}&sort=-game.date`);
 
@@ -26,15 +26,15 @@ const PlayerStats = ({ playerName }) => {
         }, []);
         setStats(stats);
   };
-
+*/
   useEffect(() => {
-    fetchPlayerData(playerName);
-  }, [playerName]);
-
+    fetchPlayerData(GameId);
+  }, [GameId]);
+/*
   useEffect(() => {
       fetchStats();
   }, [playerData]);
-
+*/
   if (!playerData || !stats) {
     return <p>Loading player data...</p>;
   }
@@ -48,6 +48,7 @@ const PlayerStats = ({ playerName }) => {
   return (
     <div>
       <p>
+        TEST
         {first_name} {last_name} {"(" + playerStats[0].player.position + ")"} Last 10 Games:
       </p>
 
@@ -79,4 +80,4 @@ const PlayerStats = ({ playerName }) => {
   );
 };
 
-export default PlayerStats;
+export default GameStats;
