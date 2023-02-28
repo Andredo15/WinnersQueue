@@ -2,14 +2,15 @@ import React, { useState, useEffect } from "react";
 import Axios from 'axios';
 
 const GameStats = ({ GameId }) => {
-  const [playerData, setGameData] = useState(null);
+  const [rosterData, setRosterData] = useState(null);
   const [stats, setStats] = useState("");
 
-  const fetchPlayerData = async (GameId) => {
-    const response = await Axios.get(`https://www.balldontlie.io/api/v1/games/${GameId}`);
-    console.log(response);
-    setGameData(response.data.data);
+  const fetchRoster = async (GameId) => {
+      const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?game_ids[]=${GameId}&starters=true`);
+    console.log(response.data.data);
+    setRosterData(response.data.data);
   };
+
 /*
   const fetchStats = async () => {
     const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?seasons[]=2022&player_ids[]=${playerData[0].id}&sort=-game.date`);
@@ -28,18 +29,17 @@ const GameStats = ({ GameId }) => {
   };
 */
   useEffect(() => {
-    fetchPlayerData(GameId);
+    fetchRoster(GameId);
   }, [GameId]);
 /*
   useEffect(() => {
       fetchStats();
   }, [playerData]);
 */
-  if (!playerData || !stats) {
+  if (!rosterData) {
     return <p>Loading player data...</p>;
   }
 
-  const { first_name = null, last_name = null, team = null } = playerData[0] || {};
   const statsArray = Object.values(stats);
   console.log("stats array: ", statsArray);
   const playerStats = statsArray.slice(0, 10);
@@ -47,10 +47,41 @@ const GameStats = ({ GameId }) => {
   
   return (
     <div>
-      <p>
-        TEST
-        {first_name} {last_name} {"(" + playerStats[0].player.position + ")"} Last 10 Games:
-      </p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Position</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>F</td>
+      {rosterData && rosterData.filter(player => player.player.position.includes("F")).map(player => (
+        <td>
+          <td key={player.id}>{player.player.first_name} {player.player.last_name}</td>
+      </td>
+      ))}
+    </tr>
+    <tr>
+      <td>G</td>
+      {rosterData && rosterData.filter(player => player.player.position.includes("G")).map(player => (
+        <td>
+          <td key={player.id}>{player.player.first_name} {player.player.last_name}</td>
+      </td>
+      ))}
+    </tr>
+    <tr>
+      <td>C</td>
+      {rosterData && rosterData.filter(player => player.player.position.includes("C")).map(player => (
+        <td>
+          <td key={player.id}>{player.player.first_name} {player.player.last_name}</td>
+        </td>
+      ))}
+    </tr>
+  </tbody>
+</table>
 
       <table>
         <thead>
@@ -76,6 +107,8 @@ const GameStats = ({ GameId }) => {
           ))}
         </tbody>
       </table>
+
+
     </div>
   );
 };

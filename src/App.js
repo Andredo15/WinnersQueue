@@ -11,7 +11,6 @@ function App() {
     const [selectedGameId, SetSelectedGameId] = useState("");
     const current = new Date();
     const date = `${current.getFullYear()}-${("0" + (current.getMonth() + 1)).slice(-2)}-${("0" + current.getDate()).slice(-2)}`;
-    console.log(date);
 
     const getTodaysGames = () => {
         Axios.get(`https://www.balldontlie.io/api/v1/games?start_date=${date}&end_date=${date}`)
@@ -25,7 +24,7 @@ function App() {
     }, []);
 
     const toggleStats = (matchUpId) => {
-        setShowStats(!showStats);
+        setShowStats(true);
         SetSelectedGameId(matchUpId);
         console.log(selectedGameId);
       };
