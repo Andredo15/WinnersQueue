@@ -9,6 +9,9 @@ function App() {
     const [matchUps, setMatchUps] = useState("");
     const [showStats, setShowStats] = useState(false);
     const [selectedGameId, SetSelectedGameId] = useState("");
+    const [homeTeam, SetHomeTeam] = useState("");
+    const [awayTeam, SetAwayTeam] = useState("");
+
     const current = new Date();
     const date = `${current.getFullYear()}-${("0" + (current.getMonth() + 1)).slice(-2)}-${("0" + current.getDate()).slice(-2)}`;
 
@@ -23,9 +26,11 @@ function App() {
         getTodaysGames();
     }, []);
 
-    const toggleStats = (matchUpId) => {
+    const toggleStats = (matchUpId, homeTeam, awayTeam) => {
         setShowStats(true);
         SetSelectedGameId(matchUpId);
+        SetHomeTeam(homeTeam);
+        SetAwayTeam(awayTeam);
         console.log(selectedGameId);
       };
     
@@ -37,12 +42,12 @@ function App() {
                 matchUps.map(matchUp => {
                     return(
                        <div key={matchUp.id}>
-                            <button onClick={() => toggleStats(matchUp.id)}><Text style={styles.text}>{matchUp.visitor_team.name + " at " + matchUp.home_team.name}</Text></button>
+                            <button onClick={() => toggleStats(matchUp.id, matchUp.home_team.name, matchUp.visitor_team.name)}><Text style={styles.text}>{matchUp.visitor_team.name + " at " + matchUp.home_team.name}</Text></button>
                        </div>
                     )
                 }) : <h3>No data yet</h3> }
-                {selectedGameId}
-            {showStats && <GameStats GameId={selectedGameId}/>}
+
+            {showStats && <GameStats GameId={selectedGameId} homeTeam={homeTeam} awayTeam={awayTeam}/>}
         </div>
     );
 
