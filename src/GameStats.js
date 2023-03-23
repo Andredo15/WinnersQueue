@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import Axios from 'axios';
 
 const GameStats = ({ GameId, homeTeam, awayTeam }) => {
-  const [rosterData, setRosterData] = useState(null);
+  const [rosterData, setRosterData] = useState("");
   const [stats, setStats] = useState("");
   const [homeTeamRoster, setHomeTeamRoster] = useState("");
   const [awayTeamRoster, setAwayTeamRoster] = useState("");
+  const [NBALineData, setNBALineData] = useState("");
+  var splitNBALineData = [];
   var splitHomePlayers = [];
   var splitAwayPlayers = [];
 
@@ -26,6 +28,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam }) => {
         splitAwayPlayers.push(element);
       }
     });
+
     setHomeTeamRoster(splitHomePlayers);
     setAwayTeamRoster(splitAwayPlayers);
 
@@ -33,6 +36,11 @@ const GameStats = ({ GameId, homeTeam, awayTeam }) => {
     console.log("away team: ", awayTeamRoster);
   };
 
+  const fetchLines = async () => {
+    const response = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7&regions=us&markets=h2h,spreads&oddsFormat=american`);
+    console.log("fetch lines: ", response.data);
+
+  };
 
 /*
   const fetchStats = async () => {
@@ -53,6 +61,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam }) => {
 */
   useEffect(() => {
     fetchRoster(GameId);
+    fetchLines();
     console.log('homeTeamRoster in use effect:', homeTeamRoster);
   }, [GameId]);
 /*

@@ -13,6 +13,26 @@
   }
 }
 
+.game-card-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+}
+
+.game-card-cover svg {
+  width: 100px;
+  height: 100px;
+  margin: 0 5px;
+}
+
+.game-card-cover .at-symbol {
+  font-size: 20px;
+  line-height: 0px; /* Adjust this value to match the height of your `game-card-cover` element */
+  align-self: center;
+}
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -24,8 +44,23 @@
   color: white;
 }
 
+.parent{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto;
+  max-width: 1200px; /* Adjust this to your desired width */
+}
+
 .App-link {
   color: #61dafb;
+}
+
+#landing-page {
+  background: url('./startUpGif.gif') no-repeat center center fixed;
+  background-size: cover;
+  height: 100vh;
 }
 
 @keyframes App-logo-spin {
