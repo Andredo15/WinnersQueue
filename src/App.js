@@ -18,6 +18,8 @@ function App() {
     const [selectedGameId, SetSelectedGameId] = useState("");
     const [homeTeam, SetHomeTeam] = useState("");
     const [awayTeam, SetAwayTeam] = useState("");
+    const [homeTeamId, setHomeTeamId] = useState("");
+    const [awayTeamId, setAwayTeamId] = useState("");
 
     const current = new Date();
     const date = `${current.getFullYear()}-${("0" + (current.getMonth() + 1)).slice(-2)}-${("0" + current.getDate()).slice(-2)}`;
@@ -45,11 +47,13 @@ function App() {
         return null; // Return null if the team name is not found in the teamMappings object
     };
 
-    const toggleStats = (matchUpId, homeTeam, awayTeam) => {
+    const toggleStats = (matchUpId, homeTeam, awayTeam, homeTeamId, awayTeamId) => {
         setShowStats(true);
         SetSelectedGameId(matchUpId);
         SetHomeTeam(homeTeam);
         SetAwayTeam(awayTeam);
+        setHomeTeamId(homeTeamId);
+        setAwayTeamId(awayTeamId);
         console.log(selectedGameId);
       };
       const Icon = NBAIcons[teamMappings.Wizards];
@@ -63,7 +67,7 @@ function App() {
                     return(
                        <div className="parent" key={matchUp.id}>
                             <Card 
-                                onClick={() => toggleStats(matchUp.id, matchUp.home_team.name, matchUp.visitor_team.name)}
+                                onClick={() => toggleStats(matchUp.id, matchUp.home_team.name, matchUp.visitor_team.name, matchUp.home_team.id, matchUp.visitor_team.id)}
                                 hoverable
                                 style={{ width: 240 }}
                                 cover={
@@ -79,29 +83,10 @@ function App() {
                     )
                 }) : <h3>No data yet</h3> }
 
-            {showStats && <GameStats GameId={selectedGameId} homeTeam={homeTeam} awayTeam={awayTeam}/>}
+            {showStats && <GameStats GameId={selectedGameId} homeTeam={homeTeam} awayTeam={awayTeam} homeTeamId={homeTeamId} awayTeamId={awayTeamId}/>}
         </div>
     );
 
 };
-
-const styles = StyleSheet.create({
-    button: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 32,
-      borderRadius: 4,
-      elevation: 3,
-      backgroundColor: 'grey',
-    },
-    text: {
-      fontSize: 16,
-      lineHeight: 21,
-      fontWeight: 'bold',
-      letterSpacing: 0.25,
-      color: 'black',
-    },
-  });
 
 export default App;
