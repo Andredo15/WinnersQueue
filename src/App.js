@@ -35,7 +35,7 @@ function App() {
         getTodaysGames();
     }, []);
 
-    // Define the function to get the corresponding icon for a team
+    // Function to get the corresponding icon for a team
     const getIconForTeam = (teamName) => {
         console.log(teamName);
         const teamKey = teamMappings[teamName];
@@ -60,29 +60,30 @@ function App() {
 
     return (
         <div>
-            <div id="landing-page"></div>
-            <h1>WINNERS QUEUE</h1>
-            {matchUps ? 
-                matchUps.map(matchUp => {
-                    return(
-                       <div className="parent" key={matchUp.id}>
-                            <Card 
-                                onClick={() => toggleStats(matchUp.id, matchUp.home_team.name, matchUp.visitor_team.name, matchUp.home_team.id, matchUp.visitor_team.id)}
-                                hoverable
-                                style={{ width: 240 }}
-                                cover={
-                                    <div className="game-card-cover">
-                                    {getIconForTeam(matchUp.visitor_team.name)}
-                                    <span className="at-symbol">@</span>
-                                    {getIconForTeam(matchUp.home_team.name)}
-                                    </div>
-                                }>
-                                <Meta title={`${matchUp.visitor_team.name} vs ${matchUp.home_team.name}`} description={`Time: ${matchUp.date}`} />
-                            </Card>
-                       </div>
-                    )
-                }) : <h3>No data yet</h3> }
 
+            <div id="landing-page"></div>
+            <img src={ require('./logo.png') } />
+            <div className="match-ups-container">
+                {matchUps ? 
+                    matchUps.map(matchUp => {
+                        return(
+                        <div className="parent" key={matchUp.id}>
+                                <Card 
+                                    onClick={() => toggleStats(matchUp.id, matchUp.home_team.name, matchUp.visitor_team.name, matchUp.home_team.id, matchUp.visitor_team.id)}
+                                    hoverable
+                                    cover={
+                                        <div className="game-card-cover">
+                                            {getIconForTeam(matchUp.visitor_team.name)}
+                                            <span className="at-symbol">@</span>
+                                            {getIconForTeam(matchUp.home_team.name)}
+                                        </div>
+                                    }>
+                                    <Meta title={`${matchUp.visitor_team.name} vs ${matchUp.home_team.name}`} description={matchUp.status.includes('Qtr') ? `${matchUp.time} ${matchUp.home_team_score}-${matchUp.visitor_team_score}` : matchUp.status} />
+                                </Card>
+                        </div>
+                        )
+                    }) : <h3>No data yet</h3> }
+            </div>
             {showStats && <GameStats GameId={selectedGameId} homeTeam={homeTeam} awayTeam={awayTeam} homeTeamId={homeTeamId} awayTeamId={awayTeamId}/>}
         </div>
     );
