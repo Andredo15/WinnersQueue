@@ -14,6 +14,8 @@ import Typography from '@mui/material/Typography';
 const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
   const [rosterData, setRosterData] = useState("");
   const [stats, setStats] = useState("");
+  const [statsArray, setStatsArray] = useState("");
+  const [playerStats, setPlayerStats] = useState("");
   const [sortedPrevGamesHome, setSortedPrevGamesHome] = useState("");
   const [sortedUpGamesHome, setSortedUpGamesHome] = useState("");
   const [sortedPrevGamesAway, setSortedPrevGamesAway] = useState("");
@@ -22,6 +24,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
   const [awayTeamRoster, setAwayTeamRoster] = useState("");
   const [NBALineData, setNBALineData] = useState("");
   const [isHovering, setIsHovering] = useState(false);
+
   const [value, setValue] = React.useState('1');
   var splitHomePlayers = [];
   var splitAwayPlayers = [];
@@ -58,21 +61,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
     
     console.log("fetch lines: ", response.data);
 
-  };
-
-  const PlayerStatsTooltip = ({ stats }) => {
-    setIsHovering(true);
-    console.log("HOVERING");
-    return (
-      <div className="recentStats">
-        <div>Last 10 games stats:</div>
-        <div>Points:</div>
-        <div>Rebounds:</div>
-        <div>Assists:</div>
-        <div>Steals:</div>
-        <div>Blocks:</div>
-      </div>
-    );
   };
 
   const fetchRecentGames = async (TeamId) => {
@@ -116,9 +104,9 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
     setValue(newValue);
   };
 
-/*
-  const fetchStats = async () => {
-    const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?seasons[]=2022&player_ids[]=${playerData[0].id}&sort=-game.date`);
+
+  const fetchStats = async (playerId) => {
+    const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?seasons[]=2022&player_ids[]=${playerId}&sort=-game.date`);
 
         const stats = response.data.data.reduce((acc, curr) => {
           const date = new Date(curr.game.date).getTime();
@@ -131,8 +119,13 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           return acc;
         }, []);
         setStats(stats);
+
+        setStatsArray(Object.values(stats));
+        setPlayerStats(statsArray.slice(0, 10))
+        console.log("stats array: ", statsArray);
+        console.log("Lebron Last 10 games: ", playerStats); 
   };
-*/
+
   useEffect(() => {
     fetchRoster(GameId);
     fetchRecentGames(homeTeamId);
@@ -162,24 +155,8 @@ console.log('homeTeamRoster length:', homeTeamRoster.length);
     return <p>Loading previous games data...</p>;
   }
 
-  const statsArray = Object.values(stats);
-  console.log("stats array: ", statsArray);
-  const playerStats = statsArray.slice(0, 10);
-  console.log("Lebron Last 10 games: ", playerStats); 
-
   return (
     <div>
-      <HtmlTooltip
-        title={
-          <React.Fragment>
-            <Typography color="inherit">Tooltip with HTML</Typography>
-            <em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}
-            {"It's very engaging. Right?"}
-          </React.Fragment>
-        }
-      >
-        <Button>HTML</Button>
-      </HtmlTooltip>
       <h2>
         {homeTeam}
       </h2>
@@ -259,12 +236,21 @@ console.log('homeTeamRoster length:', homeTeamRoster.length);
                   {rosterData && homeTeamRoster.filter(player => player.player.position.includes("F")).map(player => (
                   <td>
                     <td key={player.id}>
+                    {fetchStats(player.id)}
                     <HtmlTooltip
                       title={
                         <React.Fragment>
-                          <Typography color="inherit">Last 10 Games Stats</Typography>
-                          <em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}
-                          {"It's very engaging. Right?"}
+                          <Typography color="inherit">Last 10 Game Averages</Typography>
+                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
+                          <tr key={stats.id}>
+                            <td>{stats.game.date.substring(0,10)}</td>
+                            <td>{`Points: ${stats.pts}`}</td>
+                            <td>{`Asists: ${stats.ast}`}</td>
+                            <td>{`Rebounds: ${stats.reb}`}</td>
+                            <td>{`Blocks: ${stats.blk}`}</td>
+                            <td>{`Steals: ${stats.stl}`}</td>
+                          </tr>
+                        ))}
                         </React.Fragment>
                       }>
                       <Button>{player.player.first_name} {player.player.last_name}</Button>
