@@ -23,6 +23,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
   const [homeTeamRoster, setHomeTeamRoster] = useState("");
   const [awayTeamRoster, setAwayTeamRoster] = useState("");
   const [NBALineData, setNBALineData] = useState("");
+  const [holdPlayerId, setHoldPlayerId] = useState("");
   const [isHovering, setIsHovering] = useState(false);
 
   const [value, setValue] = React.useState('1');
@@ -50,9 +51,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
 
     setHomeTeamRoster(splitHomePlayers);
     setAwayTeamRoster(splitAwayPlayers);
-
-    console.log("home team: ", homeTeamRoster);
-    console.log("away team: ", awayTeamRoster);
   };
 
   const fetchLines = async () => {
@@ -66,8 +64,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
   const fetchRecentGames = async (TeamId) => {
 
     const response = await Axios.get(`https://www.balldontlie.io/api/v1/games?seasons[]=2022&per_page=100&team_ids[]=${TeamId}`);
-     
-    console.log("fetch recent game: ", response.data.data);
 
     const today = new Date();
 
@@ -95,20 +91,17 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
       setSortedPrevGamesAway(sortPrevGames);
       setSortedUpGamesAway(sortUpGames)
     }
-
-    console.log("NEWWWW1: ", sortPrevGames);
-    console.log("NEWWWW2: ", sortUpGames);
   };
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
-
   const fetchStats = async (playerId) => {
-    const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?seasons[]=2022&player_ids[]=${playerId}&sort=-game.date`);
+    const response = await Axios.get(`https://www.balldontlie.io/api/v1/stats?seasons[]=2022&player_ids[]=${playerId}&sort=-game.date&per_page=100`);
 
-        const stats = response.data.data.reduce((acc, curr) => {
+    setHoldPlayerId(playerId);
+        const stats = await response.data.data.reduce((acc, curr) => {
           const date = new Date(curr.game.date).getTime();
           const index = acc.findIndex(item => new Date(item.game.date).getTime() < date);
           if (index === -1) {
@@ -118,12 +111,10 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           }
           return acc;
         }, []);
-        setStats(stats);
 
+        setStats(stats);
         setStatsArray(Object.values(stats));
-        setPlayerStats(statsArray.slice(0, 10))
-        console.log("stats array: ", statsArray);
-        console.log("Lebron Last 10 games: ", playerStats); 
+        setPlayerStats(statsArray.slice(0, 10));
   };
 
   useEffect(() => {
@@ -139,13 +130,11 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
     [`& .${tooltipClasses.tooltip}`]: {
       backgroundColor: '#f5f5f9',
       color: 'rgba(0, 0, 0, 0.87)',
-      maxWidth: 220,
+      maxWidth: 400,
       fontSize: theme.typography.pxToRem(12),
       border: '1px solid #dadde9',
     },
   }));
-
-console.log('homeTeamRoster length:', homeTeamRoster.length);
 
   if (!rosterData) {
     return <p>Loading player data...</p>;
@@ -232,35 +221,36 @@ console.log('homeTeamRoster length:', homeTeamRoster.length);
               </thead>
               <tbody>
                 <tr>
-                  <td>F</td>
+                  <td>Forward</td>
                   {rosterData && homeTeamRoster.filter(player => player.player.position.includes("F")).map(player => (
                   <td>
                     <td key={player.id}>
-                    {fetchStats(player.id)}
                     <HtmlTooltip
                       title={
                         <React.Fragment>
                           <Typography color="inherit">Last 10 Game Averages</Typography>
                           {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
                           <tr key={stats.id}>
-                            <td>{stats.game.date.substring(0,10)}</td>
-                            <td>{`Points: ${stats.pts}`}</td>
-                            <td>{`Asists: ${stats.ast}`}</td>
-                            <td>{`Rebounds: ${stats.reb}`}</td>
-                            <td>{`Blocks: ${stats.blk}`}</td>
-                            <td>{`Steals: ${stats.stl}`}</td>
+                            <td>{stats.game.date.substring(5,10)}</td>
+                            <td>{`Points: ${stats.pts} `}</td>
+                            <td>{`Asists: ${stats.ast} `}</td>
+                            <td>{`Rebounds: ${stats.reb} `}</td>
+                            <td>{`Blocks: ${stats.blk} `}</td>
+                            <td>{`Steals: ${stats.stl} `}</td>
                           </tr>
                         ))}
                         </React.Fragment>
                       }>
-                      <Button>{player.player.first_name} {player.player.last_name}</Button>
+                      <Button onClick={() => fetchStats(player.player.id)}>
+                        {player.player.first_name} {player.player.last_name}
+                      </Button>
                     </HtmlTooltip>
                     </td>
                   </td>
                   ))}
                 </tr>
                 <tr>
-                  <td>G</td>
+                  <td>Guard</td>
                   {rosterData && homeTeamRoster.filter(player => player.player.position.includes("G")).map(player => (
                 <td>
                   <td key={player.id}>
@@ -279,7 +269,7 @@ console.log('homeTeamRoster length:', homeTeamRoster.length);
               ))}
             </tr>
             <tr>
-              <td>C</td>
+              <td>Center</td>
               {rosterData && homeTeamRoster.filter(player => player.player.position.includes("C")).map(player => (
                 <td key={player.id}>
                   <HtmlTooltip
@@ -380,7 +370,7 @@ console.log('homeTeamRoster length:', homeTeamRoster.length);
             </thead>
             <tbody>
               <tr>
-                <td>F</td>
+                <td>Forward</td>
                 {rosterData && awayTeamRoster.filter(player => player.player.position.includes("F")).map(player => (
                   <td key={player.id}>
                     <HtmlTooltip
@@ -397,7 +387,7 @@ console.log('homeTeamRoster length:', homeTeamRoster.length);
                 ))}
               </tr>
               <tr>
-                <td>G</td>
+                <td>Guard</td>
                 {rosterData && awayTeamRoster.filter(player => player.player.position.includes("G")).map(player => (
                   <td key={player.id}>
                     <HtmlTooltip
@@ -414,7 +404,7 @@ console.log('homeTeamRoster length:', homeTeamRoster.length);
                 ))}
               </tr>
               <tr>
-                <td>C</td>
+                <td>Center</td>
                 {rosterData && awayTeamRoster.filter(player => player.player.position.includes("C")).map(player => (
                   <td key={player.id}>
                     <HtmlTooltip
