@@ -254,16 +254,26 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                   {rosterData && homeTeamRoster.filter(player => player.player.position.includes("G")).map(player => (
                 <td>
                   <td key={player.id}>
-                    <HtmlTooltip
-                        title={
-                          <React.Fragment>
-                            <Typography color="inherit">Tooltip with HTML</Typography>
-                            <em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}
-                            {"It's very engaging. Right?"}
-                          </React.Fragment>
-                        }>
-                        <Button>{player.player.first_name} {player.player.last_name}</Button>
-                      </HtmlTooltip>
+                  <HtmlTooltip
+                      title={
+                        <React.Fragment>
+                          <Typography color="inherit">Last 10 Game Averages</Typography>
+                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
+                          <tr key={stats.id}>
+                            <td>{stats.game.date.substring(5,10)}</td>
+                            <td>{`Points: ${stats.pts} `}</td>
+                            <td>{`Asists: ${stats.ast} `}</td>
+                            <td>{`Rebounds: ${stats.reb} `}</td>
+                            <td>{`Blocks: ${stats.blk} `}</td>
+                            <td>{`Steals: ${stats.stl} `}</td>
+                          </tr>
+                        ))}
+                        </React.Fragment>
+                      }>
+                      <Button onClick={() => fetchStats(player.player.id)}>
+                        {player.player.first_name} {player.player.last_name}
+                      </Button>
+                    </HtmlTooltip>
                   </td>
               </td>
               ))}
@@ -272,15 +282,25 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
               <td>Center</td>
               {rosterData && homeTeamRoster.filter(player => player.player.position.includes("C")).map(player => (
                 <td key={player.id}>
-                  <HtmlTooltip
+                    <HtmlTooltip
                       title={
                         <React.Fragment>
-                          <Typography color="inherit">Tooltip with HTML</Typography>
-                          <em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}
-                          {"It's very engaging. Right?"}
+                          <Typography color="inherit">Last 10 Game Averages</Typography>
+                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
+                          <tr key={stats.id}>
+                            <td>{stats.game.date.substring(5,10)}</td>
+                            <td>{`Points: ${stats.pts} `}</td>
+                            <td>{`Asists: ${stats.ast} `}</td>
+                            <td>{`Rebounds: ${stats.reb} `}</td>
+                            <td>{`Blocks: ${stats.blk} `}</td>
+                            <td>{`Steals: ${stats.stl} `}</td>
+                          </tr>
+                        ))}
                         </React.Fragment>
                       }>
-                      <Button>{player.player.first_name} {player.player.last_name}</Button>
+                      <Button onClick={() => fetchStats(player.player.id)}>
+                        {player.player.first_name} {player.player.last_name}
+                      </Button>
                     </HtmlTooltip>
                 </td>
               ))}
@@ -374,15 +394,25 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                 {rosterData && awayTeamRoster.filter(player => player.player.position.includes("F")).map(player => (
                   <td key={player.id}>
                     <HtmlTooltip
-                        title={
-                          <React.Fragment>
-                            <Typography color="inherit">Tooltip with HTML</Typography>
-                            <em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}
-                            {"It's very engaging. Right?"}
-                          </React.Fragment>
-                        }>
-                        <Button>{player.player.first_name} {player.player.last_name}</Button>
-                      </HtmlTooltip>
+                      title={
+                        <React.Fragment>
+                          <Typography color="inherit">Last 10 Game Averages</Typography>
+                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
+                          <tr key={stats.id}>
+                            <td>{stats.game.date.substring(5,10)}</td>
+                            <td>{`Points: ${stats.pts} `}</td>
+                            <td>{`Asists: ${stats.ast} `}</td>
+                            <td>{`Rebounds: ${stats.reb} `}</td>
+                            <td>{`Blocks: ${stats.blk} `}</td>
+                            <td>{`Steals: ${stats.stl} `}</td>
+                          </tr>
+                        ))}
+                        </React.Fragment>
+                      }>
+                      <Button onClick={() => fetchStats(player.player.id)}>
+                        {player.player.first_name} {player.player.last_name}
+                      </Button>
+                    </HtmlTooltip>
                   </td>
                 ))}
               </tr>
@@ -391,14 +421,24 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                 {rosterData && awayTeamRoster.filter(player => player.player.position.includes("G")).map(player => (
                   <td key={player.id}>
                     <HtmlTooltip
-                        title={
-                          <React.Fragment>
-                            <Typography color="inherit">Tooltip with HTML</Typography>
-                            <em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}
-                            {"It's very engaging. Right?"}
-                          </React.Fragment>
-                        }>
-                        <Button>{player.player.first_name} {player.player.last_name}</Button>
+                      title={
+                        <React.Fragment>
+                          <Typography color="inherit">Last 10 Game Averages</Typography>
+                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
+                          <tr key={stats.id}>
+                            <td>{stats.game.date.substring(5,10)}</td>
+                            <td>{`Points: ${stats.pts} `}</td>
+                            <td>{`Asists: ${stats.ast} `}</td>
+                            <td>{`Rebounds: ${stats.reb} `}</td>
+                            <td>{`Blocks: ${stats.blk} `}</td>
+                            <td>{`Steals: ${stats.stl} `}</td>
+                          </tr>
+                        ))}
+                        </React.Fragment>
+                      }>
+                      <Button onClick={() => fetchStats(player.player.id)}>
+                        {player.player.first_name} {player.player.last_name}
+                      </Button>
                     </HtmlTooltip>
                 </td>
                 ))}
@@ -408,14 +448,24 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                 {rosterData && awayTeamRoster.filter(player => player.player.position.includes("C")).map(player => (
                   <td key={player.id}>
                     <HtmlTooltip
-                        title={
-                          <React.Fragment>
-                            <Typography color="inherit">Tooltip with HTML</Typography>
-                            <em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}
-                            {"It's very engaging. Right?"}
-                          </React.Fragment>
-                        }>
-                        <Button>{player.player.first_name} {player.player.last_name}</Button>
+                      title={
+                        <React.Fragment>
+                          <Typography color="inherit">Last 10 Game Averages</Typography>
+                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
+                          <tr key={stats.id}>
+                            <td>{stats.game.date.substring(5,10)}</td>
+                            <td>{`Points: ${stats.pts} `}</td>
+                            <td>{`Asists: ${stats.ast} `}</td>
+                            <td>{`Rebounds: ${stats.reb} `}</td>
+                            <td>{`Blocks: ${stats.blk} `}</td>
+                            <td>{`Steals: ${stats.stl} `}</td>
+                          </tr>
+                        ))}
+                        </React.Fragment>
+                      }>
+                      <Button onClick={() => fetchStats(player.player.id)}>
+                        {player.player.first_name} {player.player.last_name}
+                      </Button>
                     </HtmlTooltip>
                 </td>
                 ))}
@@ -428,31 +478,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           </TabPanel>
         </TabContext>
       </Box>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Points</th>
-                <th>Rebounds</th>
-                <th>Assists</th>
-                <th>Blocks</th>
-                <th>Steals</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, index) => (
-                <tr key={stats.id}>
-                  <td>{stats.game.date.substring(0,10)}</td>
-                  <td>{stats.pts}</td>
-                  <td>{stats.reb}</td>
-                  <td>{stats.ast}</td>
-                  <td>{stats.blk}</td>
-                  <td>{stats.stl}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
     </div>
   );
 };
