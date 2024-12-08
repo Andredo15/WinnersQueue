@@ -6,6 +6,9 @@ import Button from 'react-bootstrap/Button';
 import GameStats from './GameStats';
 import * as NBAIcons from 'react-nba-logos';
 import './App.css';
+import { BalldontlieAPI } from "@balldontlie/sdk";
+
+const api = new BalldontlieAPI({ apiKey: "d839a168-2210-4737-af35-1ddd65540aa5" });
 
 const { Meta } = Card;
 
@@ -63,6 +66,7 @@ function App() {
 
             <div id="landing-page"></div>
             <img src={ require('./logo.png') } />
+            <br/>
             <div className="match-ups-container">
                 {matchUps ? 
                     matchUps.map(matchUp => {

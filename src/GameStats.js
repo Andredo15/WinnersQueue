@@ -146,7 +146,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
 
   return (
     <div>
-      <h2>
+      <h2 align="center">
         {homeTeam}
       </h2>
       <Box sx={{ width: '100%', typography: 'body1' }}>
@@ -161,7 +161,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           <TabPanel value="1">
             {/* Start of last 10 games code */}
             {sortedPrevGamesHome.length > 0 ? (
-            <table>
+            <table class="center">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -189,7 +189,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           <TabPanel value="2">
             {/* Start of upcoming games code */}
             {sortedPrevGamesHome.length > 0 ? (
-            <table>
+            <table class="center">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -315,7 +315,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
       </Box>
 
     {/* Start of away team roster */}
-    <h2>
+    <h2 align="center">
       {awayTeam}
     </h2>
     <Box sx={{ width: '100%', typography: 'body1' }}>
@@ -330,7 +330,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           <TabPanel value="1">
             {/* Start of last 10 games code */}
             {sortedPrevGamesAway.length > 0 ? (
-            <table>
+            <table class="center">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -358,7 +358,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           <TabPanel value="2">
             {/* Start of upcoming games code */}
             {sortedPrevGamesAway.length > 0 ? (
-            <table>
+            <table class="center">
               <thead>
                 <tr>
                   <th>Date</th>

@@ -13,6 +13,11 @@
   }
 }
 
+.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .game-stats {
   display: flex;
   justify-content: center;
