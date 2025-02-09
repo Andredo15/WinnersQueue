@@ -4,6 +4,7 @@
   "homepage": "https://Andredo15.github.io/WinnersQueue",
   "private": true,
   "dependencies": {
+    "@balldontlie/sdk": "^1.1.2",
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",
     "@mui/lab": "^5.0.0-alpha.124",

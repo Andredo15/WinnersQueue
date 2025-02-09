@@ -27,13 +27,15 @@ function App() {
     const current = new Date();
     const date = `${current.getFullYear()}-${("0" + (current.getMonth() + 1)).slice(-2)}-${("0" + current.getDate()).slice(-2)}`;
 
+    console.log("Todays games: ", api.nba.getGames({ start_date: date, end_date: date }));
+
     const getTodaysGames = () => {
-        Axios.get(`https://www.balldontlie.io/api/v1/games?start_date=${date}&end_date=${date}`)
+        api.nba.getGames({ start_date: date, end_date: date })
             .then((response) => {
-                setMatchUps(response.data.data);
+                setMatchUps(response.data);
             });
     };
-
+    console.log("Todays games 2: ", matchUps);
     useEffect(() => {
         getTodaysGames();
     }, []);
@@ -59,7 +61,6 @@ function App() {
         setAwayTeamId(awayTeamId);
         console.log(selectedGameId);
       };
-      const Icon = NBAIcons[teamMappings.Wizards];
 
     return (
         <div>
