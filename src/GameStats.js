@@ -26,36 +26,26 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
     points: 0,
     assists: 0,
     rebounds: 0,
-    blocks: 0,
-    steals: 0,
   });
   const [averagesL5, setAveragesL5] = useState({
     points: 0,
     assists: 0,
     rebounds: 0,
-    blocks: 0,
-    steals: 0,
   });
   const [hitRate2023, sethitRate2023] = useState({
     points: 0,
     assists: 0,
     rebounds: 0,
-    blocks: 0,
-    steals: 0,
   });
   const [hitRate2024, sethitRate2024] = useState({
     points: 0,
     assists: 0,
     rebounds: 0,
-    blocks: 0,
-    steals: 0,
   });
   const [playerLines, setPlayerLine] = useState({
     points: 0,
     assists: 0,
     rebounds: 0,
-    blocks: 0,
-    steals: 0,
   });
   
 
@@ -78,7 +68,7 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
 
   const fetchLines = async (firstName, LastName) => {
 
-    const findGame = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7`);
+    const findGame = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/?apiKey=204d8de1e4f883e1bb88f68ad6533842`);
     
     const selectedGame = findGame.data.find((game) => game.home_team.includes(homeTeam));
     
@@ -90,10 +80,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
 
     const getReboundLinesEvent = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/${selectedGame.id}/odds?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7&regions=us&markets=player_rebounds&bookmakers=draftkings`);
 
-    const getBlockLinesEvent = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/${selectedGame.id}/odds?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7&regions=us&markets=player_blocks&bookmakers=draftkings`);
-
-    const getStealLinesEvent = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/${selectedGame.id}/odds?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7&regions=us&markets=player_steals&bookmakers=draftkings`);
-
     console.log("fetch lines2: ", getPointLineEvent.data.bookmakers[0].markets[0].outcomes, firstName);
 
     const getPlayerLinePlayer = getPointLineEvent.data.bookmakers[0].markets[0].outcomes.find((line) => line.description.includes(firstName));
@@ -102,20 +88,17 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
 
     const getReboundLinePlayer = getReboundLinesEvent.data.bookmakers[0].markets[0].outcomes.find((line) => line.description.includes(firstName));
 
-    const getBlockLinePlayer = getBlockLinesEvent.data.bookmakers[0].markets[0].outcomes.find((line) => line.description.includes(firstName));
-
-    const getStealLinePlayer = getStealLinesEvent.data.bookmakers[0].markets[0].outcomes.find((line) => line.description.includes(firstName));
-
     //if this is undefined, it is because there is no current market for the selected player
-    console.log("fetch lines3: ", getPlayerLinePlayer);
+    console.log("fetch lines3 points: ", getPlayerLinePlayer);
+    console.log("fetch lines3 assists: ", getAsistLinePlayer);
 
     setPlayerLine({
       points: getPlayerLinePlayer.point.toFixed(2),
       assists: getAsistLinePlayer.point.toFixed(2),
       rebounds: getReboundLinePlayer.point.toFixed(2),
-      blocks: getBlockLinePlayer.point.toFixed(2),
-      steals: getStealLinePlayer.point.toFixed(2),
     });
+
+    console.log("test22 fetch lines ", playerLines.points);
 
   };
 
@@ -179,6 +162,8 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
       end_date: formattedTodayDate,   // Adjust end date to today's date
      });
 
+    const fetchPlayerLines = await fetchLines(firstName, lastName);
+
     let games2023 = await api.nba.getStats({
       player_ids: [playerId],
       seasons: [2023],
@@ -186,33 +171,43 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
      });
     games2023 = games2023.data.filter((game) => game.min > 25);
     const numTotalGames2023 = games2023.length;
-    console.log("test11 ", games2023);
-    const hitRate2023 = games2023.filter((game) => game.pts >= playerLines.points);
-    console.log("test22 ", hitRate2023, playerLines.points);
-    console.log("test33 ", hitRate2023.length*100/numTotalGames2023);
+    const ptsHR2023 = games2023.filter((game) => game.pts >= playerLines.points);
+    const astHR2023 = games2023.filter((game) => game.ast >= playerLines.assists);
+    const rebHR2023 = games2023.filter((game) => game.reb >= playerLines.rebounds);
     
     sethitRate2023({
-      points: hitRate2023.length*100/numTotalGames2023,
+      points: Math.round(ptsHR2023.length*100/numTotalGames2023),
+      assists: Math.round(astHR2023.length*100/numTotalGames2023),
+      rebounds: Math.round(rebHR2023.length*100/numTotalGames2023),
     });
 
-    const games2024 = await api.nba.getStats({
+    let games2024 = await api.nba.getStats({
       player_ids: [playerId],
       seasons: [2024],
       per_page: 100,
      });
-     const numTotalGames2024 = games2024.length;
+    games2024 = games2024.data.filter((game) => game.min > 25);
+    const numTotalGames2024 = games2024.length;
+    console.log("test11 ", games2024);
+    const ptsHR2024 = games2024.filter((game) => game.pts >= playerLines.points);
+    const astHR2024 = games2024.filter((game) => game.ast >= playerLines.assists);
+    const rebHR2024 = games2024.filter((game) => game.reb >= playerLines.rebounds);
+    console.log("test22 ", ptsHR2024, playerLines.points);
+    console.log("test33 ", ptsHR2024.length*100/numTotalGames2024);
+
+    sethitRate2024({
+      points: Math.round(ptsHR2024.length*100/numTotalGames2024),
+      assists: Math.round(astHR2024.length*100/numTotalGames2024),
+      rebounds: Math.round(rebHR2024.length*100/numTotalGames2024),
+    });
+
 
 
     console.log(firstName, " ", lastName, " 2023 games ", games2023);
 
-
-
     console.log(firstName, " ", lastName, " 2024 games ", games2024);
 
-    const fetchPlayerLines = await fetchLines(firstName, lastName);
     console.log("fetch lines for selected player: ", fetchPlayerLines);
-    let last10hitRate = 0;
-    let last5hitRate = 0;
 
     const stats = response.data.reduce((acc, curr) => {
       if (curr.min === '00') {
@@ -229,48 +224,28 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
       return acc;
     }, []);
 
-    const last10Stats = stats.slice(0, 10);
+    let last10Stats = stats.slice(0, 10);
     console.log("last 10 games: ", last10Stats);
+    const last10StatsLen = last10Stats.length;
+    const last10PHR = last10Stats.filter((game) => game.pts >= playerLines.points);
+    const last10AHR = last10Stats.filter((game) => game.ast >= playerLines.assists);
+    const last10RHR = last10Stats.filter((game) => game.reb >= playerLines.rebounds);
+    setAveragesL10({
+      points: Math.round(last10PHR.length/last10StatsLen*100),
+      assists: Math.round(last10AHR.length/last10StatsLen*100),
+      rebounds: Math.round(last10RHR.length/last10StatsLen*100),
+    });
 
     const last5Stats = stats.slice(0, 5);
     console.log("last 5 games: ", last5Stats)
-    const stats2023 = await api.nba.getSeasonAverages({
-      season: 2023,
-      player_id: playerId,
-    });
-    const stats2024 = await api.nba.getSeasonAverages({
-      season: 2024,
-      player_id: playerId,
-    });
-
-    console.log ("2023 stats: ", stats2023);
-
-    const calculateAverages = (statsArray) => {
-      const statsKeys = {
-        points: "pts",
-        assists: "ast",
-        rebounds: "reb",
-        blocks: "blk",
-        steals: "stl",
-      };
-    
-      return Object.fromEntries(
-        Object.entries(statsKeys).map(([key, statKey]) => {
-          const avg = statsArray.reduce((sum, stats) => sum + (stats[statKey] || 0), 0) / statsArray.length;
-          return [key, parseFloat(avg.toFixed(2))];
-        })
-      );
-    };
-    
-    setAveragesL10(calculateAverages(last10Stats));
-    setAveragesL5(calculateAverages(last5Stats));
-
-    sethitRate2024({
-      points: parseFloat(stats2024.data[0].pts.toFixed(2)),
-      assists: parseFloat(stats2024.data[0].pts.toFixed(2)),
-      rebounds: parseFloat(stats2024.data[0].pts.toFixed(2)),
-      blocks: parseFloat(stats2024.data[0].pts.toFixed(2)),
-      steals: parseFloat(stats2024.data[0].pts.toFixed(2)),
+    const last5StatsLen = last5Stats.length;
+    const last5PHR = last5Stats.filter((game) => game.pts >= playerLines.points);
+    const last5AHR = last5Stats.filter((game) => game.ast >= playerLines.assists);
+    const last5RHR = last5Stats.filter((game) => game.reb >= playerLines.rebounds);
+    setAveragesL5({
+      points: Math.round(last5PHR.length/last5StatsLen*100),
+      assists: Math.round(last5AHR.length/last5StatsLen*100),
+      rebounds: Math.round(last5RHR.length/last5StatsLen*100),
     });
 
       setStatsArray(Object.values(stats));
@@ -396,8 +371,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${averagesL10.points}`}</td>
                           <td>{`Assists Hit Rate: ${averagesL10.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${averagesL10.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${averagesL10.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${averagesL10.steals}`}</td>
                         </tr>
                         {/* Print L5 averages */}
                         <tr>
@@ -405,8 +378,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${averagesL5.points}`}</td>
                           <td>{`Assists Hit Rate: ${averagesL5.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${averagesL5.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${averagesL5.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${averagesL5.steals}`}</td>
                         </tr>
                         {/* Print 2023 averages */}
                         <tr>
@@ -414,8 +385,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${hitRate2023.points}`}</td>
                           <td>{`Assists Hit Rate: ${hitRate2023.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${hitRate2023.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${hitRate2023.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${hitRate2023.steals}`}</td>
                         </tr>
                         {/* Print 2024 averages */}
                         <tr>
@@ -423,8 +392,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${hitRate2024.points}`}</td>
                           <td>{`Assists Hit Rate: ${hitRate2024.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${hitRate2024.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${hitRate2024.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${hitRate2024.steals}`}</td>
                         </tr>
                         {/* Print Over/Under Lines */}
                         <tr>
@@ -432,8 +399,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${playerLines.points}`}</td>
                           <td>{`Assists Hit Rate: ${playerLines.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${playerLines.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${playerLines.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${playerLines.steals}`}</td>
                         </tr>
                         </React.Fragment>
                       }>
@@ -464,8 +429,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                             <td>{`Points Hit Rate: ${averagesL10.points}`}</td>
                             <td>{`Assists Hit Rate: ${averagesL10.assists}`}</td>
                             <td>{`Rebounds Hit Rate: ${averagesL10.rebounds}`}</td>
-                            <td>{`Blocks Hit Rate: ${averagesL10.blocks}`}</td>
-                            <td>{`Steals Hit Rate: ${averagesL10.steals}`}</td>
                         </tr>
                         {/* Print L5 averages */}
                         <tr>
@@ -473,8 +436,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${averagesL5.points}`}</td>
                           <td>{`Assists Hit Rate: ${averagesL5.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${averagesL5.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${averagesL5.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${averagesL5.steals}`}</td>
                         </tr>
                         {/* Print 2023 averages */}
                         <tr>
@@ -482,8 +443,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${hitRate2023.points}`}</td>
                           <td>{`Assists Hit Rate: ${hitRate2023.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${hitRate2023.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${hitRate2023.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${hitRate2023.steals}`}</td>
                         </tr>
                         {/* Print 2024 averages */}
                         <tr>
@@ -491,8 +450,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${hitRate2024.points}`}</td>
                           <td>{`Assists Hit Rate: ${hitRate2024.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${hitRate2024.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${hitRate2024.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${hitRate2024.steals}`}</td>
                         </tr>
                         {/* Print Over/Under Lines */}
                         <tr>
@@ -500,8 +457,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points Hit Rate: ${playerLines.points}`}</td>
                           <td>{`Assists Hit Rate: ${playerLines.assists}`}</td>
                           <td>{`Rebounds Hit Rate: ${playerLines.rebounds}`}</td>
-                          <td>{`Blocks Hit Rate: ${playerLines.blocks}`}</td>
-                          <td>{`Steals Hit Rate: ${playerLines.steals}`}</td>
                         </tr>
                         </React.Fragment>
                       }>
@@ -531,8 +486,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                             <td>{`Points: ${averagesL10.points}`}</td>
                             <td>{`Assists: ${averagesL10.assists}`}</td>
                             <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                            <td>{`Blocks: ${averagesL10.blocks}`}</td>
-                            <td>{`Steals: ${averagesL10.steals}`}</td>
                           </tr>
                         {/* Print L5 averages */}
                         <tr>
@@ -540,8 +493,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${averagesL5.points}`}</td>
                           <td>{`Assists: ${averagesL5.assists}`}</td>
                           <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                          <td>{`Blocks: ${averagesL5.blocks}`}</td>
-                          <td>{`Steals: ${averagesL5.steals}`}</td>
                         </tr>
                         {/* Print 2023 averages */}
                         <tr>
@@ -549,8 +500,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2023.points}`}</td>
                           <td>{`Assists: ${hitRate2023.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2023.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2023.steals}`}</td>
                         </tr>
                         {/* Print 2024 averages */}
                         <tr>
@@ -558,8 +507,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2024.points}`}</td>
                           <td>{`Assists: ${hitRate2024.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2024.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2024.steals}`}</td>
                         </tr>
                         {/* Print Over/Under Lines */}
                         <tr>
@@ -567,8 +514,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${playerLines.points}`}</td>
                           <td>{`Assists: ${playerLines.assists}`}</td>
                           <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                          <td>{`Blocks: ${playerLines.blocks}`}</td>
-                          <td>{`Steals: ${playerLines.steals}`}</td>
                         </tr>
                         </React.Fragment>
                       }>
@@ -682,8 +627,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                             <td>{`Points: ${averagesL10.points}`}</td>
                             <td>{`Assists: ${averagesL10.assists}`}</td>
                             <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                            <td>{`Blocks: ${averagesL10.blocks}`}</td>
-                            <td>{`Steals: ${averagesL10.steals}`}</td>
                           </tr>
                         {/* Print L5 averages */}
                         <tr>
@@ -691,8 +634,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${averagesL5.points}`}</td>
                           <td>{`Assists: ${averagesL5.assists}`}</td>
                           <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                          <td>{`Blocks: ${averagesL5.blocks}`}</td>
-                          <td>{`Steals: ${averagesL5.steals}`}</td>
                         </tr>
                         {/* Print 2023 averages */}
                         <tr>
@@ -700,8 +641,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2023.points}`}</td>
                           <td>{`Assists: ${hitRate2023.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2023.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2023.steals}`}</td>
                         </tr>
                         {/* Print 2024 averages */}
                         <tr>
@@ -709,8 +648,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2024.points}`}</td>
                           <td>{`Assists: ${hitRate2024.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2024.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2024.steals}`}</td>
                         </tr>
                         {/* Print Over/Under Lines */}
                         <tr>
@@ -718,8 +655,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${playerLines.points}`}</td>
                           <td>{`Assists: ${playerLines.assists}`}</td>
                           <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                          <td>{`Blocks: ${playerLines.blocks}`}</td>
-                          <td>{`Steals: ${playerLines.steals}`}</td>
                         </tr>
                         </React.Fragment>
                       }>
@@ -748,8 +683,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                             <td>{`Points: ${averagesL10.points}`}</td>
                             <td>{`Assists: ${averagesL10.assists}`}</td>
                             <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                            <td>{`Blocks: ${averagesL10.blocks}`}</td>
-                            <td>{`Steals: ${averagesL10.steals}`}</td>
                           </tr>
                         {/* Print L5 averages */}
                         <tr>
@@ -757,8 +690,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${averagesL5.points}`}</td>
                           <td>{`Assists: ${averagesL5.assists}`}</td>
                           <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                          <td>{`Blocks: ${averagesL5.blocks}`}</td>
-                          <td>{`Steals: ${averagesL5.steals}`}</td>
                         </tr>
                         {/* Print 2023 averages */}
                         <tr>
@@ -766,8 +697,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2023.points}`}</td>
                           <td>{`Assists: ${hitRate2023.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2023.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2023.steals}`}</td>
                         </tr>
                         {/* Print 2024 averages */}
                         <tr>
@@ -775,8 +704,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2024.points}`}</td>
                           <td>{`Assists: ${hitRate2024.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2024.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2024.steals}`}</td>
                         </tr>
                         {/* Print Over/Under Lines */}
                         <tr>
@@ -784,8 +711,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${playerLines.points}`}</td>
                           <td>{`Assists: ${playerLines.assists}`}</td>
                           <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                          <td>{`Blocks: ${playerLines.blocks}`}</td>
-                          <td>{`Steals: ${playerLines.steals}`}</td>
                         </tr>
                         </React.Fragment>
                       }>
@@ -814,8 +739,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                             <td>{`Points: ${averagesL10.points}`}</td>
                             <td>{`Assists: ${averagesL10.assists}`}</td>
                             <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                            <td>{`Blocks: ${averagesL10.blocks}`}</td>
-                            <td>{`Steals: ${averagesL10.steals}`}</td>
                           </tr>
                         {/* Print L5 averages */}
                         <tr>
@@ -823,8 +746,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${averagesL5.points}`}</td>
                           <td>{`Assists: ${averagesL5.assists}`}</td>
                           <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                          <td>{`Blocks: ${averagesL5.blocks}`}</td>
-                          <td>{`Steals: ${averagesL5.steals}`}</td>
                         </tr>
                         {/* Print 2023 averages */}
                         <tr>
@@ -832,8 +753,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2023.points}`}</td>
                           <td>{`Assists: ${hitRate2023.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2023.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2023.steals}`}</td>
                         </tr>
                         {/* Print 2024 averages */}
                         <tr>
@@ -841,8 +760,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${hitRate2024.points}`}</td>
                           <td>{`Assists: ${hitRate2024.assists}`}</td>
                           <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                          <td>{`Blocks: ${hitRate2024.blocks}`}</td>
-                          <td>{`Steals: ${hitRate2024.steals}`}</td>
                         </tr>
                         {/* Print Over/Under Lines */}
                         <tr>
@@ -850,8 +767,6 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                           <td>{`Points: ${playerLines.points}`}</td>
                           <td>{`Assists: ${playerLines.assists}`}</td>
                           <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                          <td>{`Blocks: ${playerLines.blocks}`}</td>
-                          <td>{`Steals: ${playerLines.steals}`}</td>
                         </tr>
                         </React.Fragment>
                       }>
