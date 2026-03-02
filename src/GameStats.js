@@ -1,105 +1,143 @@
 import React, { useState, useEffect } from "react";
-import Axios from 'axios';
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
-import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
-import Tooltip, { tooltipClasses } from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { BalldontlieAPI } from "@balldontlie/sdk";
 
-const api = new BalldontlieAPI({ apiKey: "d839a168-2210-4737-af35-1ddd65540aa5" });
+const BALLDONTLIE_API_KEY = process.env.REACT_APP_BALLDONTLIE_API_KEY || '';
+
+const api = new BalldontlieAPI({ apiKey: BALLDONTLIE_API_KEY });
 
 const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
-  const [statsArray, setStatsArray] = useState("");
-  const [playerStats, setPlayerStats] = useState("");
   const [sortedPrevGamesHome, setSortedPrevGamesHome] = useState("");
   const [sortedUpGamesHome, setSortedUpGamesHome] = useState("");
   const [sortedPrevGamesAway, setSortedPrevGamesAway] = useState("");
   const [sortedUpGamesAway, setSortedUpGamesAway] = useState("");
   const [homeTeamRoster, setHomeTeamRoster] = useState("");
   const [awayTeamRoster, setAwayTeamRoster] = useState("");
-  const [averagesL10, setAveragesL10] = useState({
-    points: 0,
-    assists: 0,
-    rebounds: 0,
-  });
-  const [averagesL5, setAveragesL5] = useState({
-    points: 0,
-    assists: 0,
-    rebounds: 0,
-  });
-  const [hitRate2023, sethitRate2023] = useState({
-    points: 0,
-    assists: 0,
-    rebounds: 0,
-  });
-  const [hitRate2024, sethitRate2024] = useState({
-    points: 0,
-    assists: 0,
-    rebounds: 0,
-  });
-  const [playerLines, setPlayerLine] = useState({
-    points: 0,
-    assists: 0,
-    rebounds: 0,
-  });
+  const [playersInfo, setPlayersInfo] = useState({}); // keyed by player id
   
 
   const [value, setValue] = React.useState('1');
 
-  const fetchRoster = async (GameId) => {
-    const homeTeamId = (await api.nba.getGame(GameId)).data.home_team.id;
-    const awayTeamId = (await api.nba.getGame(GameId)).data.visitor_team.id;
-
-    const homeRoster = await api.nba.getActivePlayers({ team_ids: [homeTeamId] });
-    const awayRoster = await api.nba.getActivePlayers({ team_ids: [awayTeamId] });
-
-    setHomeTeamRoster(homeRoster.data.sort((a, b) => a.min - b.min));
-    setAwayTeamRoster(awayRoster.data.sort((a, b) => a.min - b.min));
-    console.log("fetch home team roster: ", homeTeamRoster);
-    console.log("fetch away team roster: ", awayTeamRoster);
-    console.log("Test stats: ", await api.nba.getStats({ player_ids: [13] }));
-    
+  // Throttled fetch to avoid overwhelming API
+  const fetchPlayerInfoThrottled = async (players, delayMs = 100) => {
+    console.log(`Starting to fetch ${players.length} players with ${delayMs}ms delay`);
+    const results = [];
+    for (let i = 0; i < players.length; i++) {
+      const player = players[i];
+      console.log(`[${i + 1}/${players.length}] Fetching player ${player.id} - ${player.first_name} ${player.last_name}`);
+      await fetchPlayerInfo(player);
+      if (i < players.length - 1) {
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+    }
+    console.log(`Finished fetching ${players.length} players`);
+    return results;
   };
 
-  const fetchLines = async (firstName, LastName) => {
+  const fetchRoster = async (GameId) => {
+    try {
+      console.log('fetchRoster started for GameId:', GameId);
+      const homeTeamId = (await api.nba.getGame(GameId)).data.home_team.id;
+      const awayTeamId = (await api.nba.getGame(GameId)).data.visitor_team.id;
+      console.log('Team IDs retrieved:', { homeTeamId, awayTeamId });
 
-    const findGame = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/?apiKey=204d8de1e4f883e1bb88f68ad6533842`);
-    
-    const selectedGame = findGame.data.find((game) => game.home_team.includes(homeTeam));
-    
-    console.log("fetch lines1: ", selectedGame);
+      const homeRoster = await api.nba.getActivePlayers({ team_ids: [homeTeamId] });
+      const awayRoster = await api.nba.getActivePlayers({ team_ids: [awayTeamId] });
+      const homePlayers = homeRoster.data.sort((a, b) => a.min - b.min);
+      const awayPlayers = awayRoster.data.sort((a, b) => a.min - b.min);
+      console.log('Rosters retrieved:', { homeCount: homePlayers.length, awayCount: awayPlayers.length });
 
-    const getPointLineEvent = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/${selectedGame.id}/odds?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7&regions=us&markets=player_points&bookmakers=draftkings`);
+      setHomeTeamRoster(homePlayers);
+      setAwayTeamRoster(awayPlayers);
+      
+      // Fetch stats with throttling to avoid API rate limits
+      console.log('Starting stats fetch for home team');
+      fetchPlayerInfoThrottled(homePlayers, 150).catch(e => console.error('Home team stats error:', e));
+      console.log('Starting stats fetch for away team');
+      fetchPlayerInfoThrottled(awayPlayers, 150).catch(e => console.error('Away team stats error:', e));
+    } catch (e) {
+      console.error('Error in fetchRoster:', e.message);
+    }
+  };
 
-    const getAsistLinesEvent = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/${selectedGame.id}/odds?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7&regions=us&markets=player_assists&bookmakers=draftkings`);
+  const fetchPlayerInfo = async (player) => {
+    try {
+      const playerId = player.id;
+      const startTime = performance.now();
+      console.log(`[API] Player ${playerId}: Starting fetch`);
 
-    const getReboundLinesEvent = await Axios.get(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/${selectedGame.id}/odds?apiKey=d265dba2d2f4dcfa64e3ce0c86008bc7&regions=us&markets=player_rebounds&bookmakers=draftkings`);
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - 30);
+      const formattedStartDate = startDate.toISOString().split('T')[0];
+      const formattedTodayDate = today.toISOString().split('T')[0];
 
-    console.log("fetch lines2: ", getPointLineEvent.data.bookmakers[0].markets[0].outcomes, firstName);
+      // Make all 3 API calls in parallel instead of sequentially
+      console.log(`[API] Player ${playerId}: Making 3 parallel API calls`);
+      const [response, games2023Res, games2024Res] = await Promise.all([
+        api.nba.getStats({
+          player_ids: [playerId],
+          start_date: formattedStartDate,
+          end_date: formattedTodayDate,
+        }),
+        api.nba.getStats({ player_ids: [playerId], seasons: [2023], per_page: 100 }),
+        api.nba.getStats({ player_ids: [playerId], seasons: [2024], per_page: 100 }),
+      ]);
 
-    const getPlayerLinePlayer = getPointLineEvent.data.bookmakers[0].markets[0].outcomes.find((line) => line.description.includes(firstName));
+      let games2023 = (games2023Res.data || []).filter((g) => g.min > 25);
+      const numTotalGames2023 = games2023.length;
+      const avgPts2023 = numTotalGames2023 > 0 ? Math.round(games2023.reduce((s, g) => s + parseFloat(g.pts || 0), 0) / numTotalGames2023 * 10) / 10 : 0;
+      const avgAst2023 = numTotalGames2023 > 0 ? Math.round(games2023.reduce((s, g) => s + parseFloat(g.ast || 0), 0) / numTotalGames2023 * 10) / 10 : 0;
+      const avgReb2023 = numTotalGames2023 > 0 ? Math.round(games2023.reduce((s, g) => s + parseFloat(g.reb || 0), 0) / numTotalGames2023 * 10) / 10 : 0;
 
-    const getAsistLinePlayer = getAsistLinesEvent.data.bookmakers[0].markets[0].outcomes.find((line) => line.description.includes(firstName));
+      let games2024 = (games2024Res.data || []).filter((g) => g.min > 25);
+      const numTotalGames2024 = games2024.length;
+      const avgPts2024 = numTotalGames2024 > 0 ? Math.round(games2024.reduce((s, g) => s + parseFloat(g.pts || 0), 0) / numTotalGames2024 * 10) / 10 : 0;
+      const avgAst2024 = numTotalGames2024 > 0 ? Math.round(games2024.reduce((s, g) => s + parseFloat(g.ast || 0), 0) / numTotalGames2024 * 10) / 10 : 0;
+      const avgReb2024 = numTotalGames2024 > 0 ? Math.round(games2024.reduce((s, g) => s + parseFloat(g.reb || 0), 0) / numTotalGames2024 * 10) / 10 : 0;
 
-    const getReboundLinePlayer = getReboundLinesEvent.data.bookmakers[0].markets[0].outcomes.find((line) => line.description.includes(firstName));
+      const stats = (response.data || []).reduce((acc, curr) => {
+        if (curr.min === '00') return acc;
+        const date = new Date(curr.game.date).getTime();
+        const index = acc.findIndex(item => new Date(item.game.date).getTime() < date);
+        if (index === -1) acc.push(curr);
+        else acc.splice(index, 0, curr);
+        return acc;
+      }, []);
 
-    //if this is undefined, it is because there is no current market for the selected player
-    console.log("fetch lines3 points: ", getPlayerLinePlayer);
-    console.log("fetch lines3 assists: ", getAsistLinePlayer);
+      const last10Stats = stats.slice(0, 10);
+      const last10StatsLen = last10Stats.length;
+      const avgL10Pts = last10StatsLen > 0 ? Math.round(last10Stats.reduce((s, g) => s + parseFloat(g.pts || 0), 0) / last10StatsLen * 10) / 10 : 0;
+      const avgL10Ast = last10StatsLen > 0 ? Math.round(last10Stats.reduce((s, g) => s + parseFloat(g.ast || 0), 0) / last10StatsLen * 10) / 10 : 0;
+      const avgL10Reb = last10StatsLen > 0 ? Math.round(last10Stats.reduce((s, g) => s + parseFloat(g.reb || 0), 0) / last10StatsLen * 10) / 10 : 0;
 
-    setPlayerLine({
-      points: getPlayerLinePlayer.point.toFixed(2),
-      assists: getAsistLinePlayer.point.toFixed(2),
-      rebounds: getReboundLinePlayer.point.toFixed(2),
-    });
+      const last5Stats = stats.slice(0, 5);
+      const last5StatsLen = last5Stats.length;
+      const avgL5Pts = last5StatsLen > 0 ? Math.round(last5Stats.reduce((s, g) => s + parseFloat(g.pts || 0), 0) / last5StatsLen * 10) / 10 : 0;
+      const avgL5Ast = last5StatsLen > 0 ? Math.round(last5Stats.reduce((s, g) => s + parseFloat(g.ast || 0), 0) / last5StatsLen * 10) / 10 : 0;
+      const avgL5Reb = last5StatsLen > 0 ? Math.round(last5Stats.reduce((s, g) => s + parseFloat(g.reb || 0), 0) / last5StatsLen * 10) / 10 : 0;
 
-    console.log("test22 fetch lines ", playerLines.points);
+      const info = {
+        averagesL10: { points: avgL10Pts, assists: avgL10Ast, rebounds: avgL10Reb },
+        averagesL5: { points: avgL5Pts, assists: avgL5Ast, rebounds: avgL5Reb },
+        hitRate2023: { points: avgPts2023, assists: avgAst2023, rebounds: avgReb2023 },
+        hitRate2024: { points: avgPts2024, assists: avgAst2024, rebounds: avgReb2024 },
+      };
 
+      const elapsed = performance.now() - startTime;
+      console.log(`[API] Player ${playerId}: Completed in ${elapsed.toFixed(0)}ms`);
+      setPlayersInfo(prev => ({ ...prev, [playerId]: info }));
+      return info;
+    } catch (e) {
+      console.error(`[API] Error fetching player ${player.id}: ${e.message} - ${e.code || 'unknown'}`);
+      return null;
+    }
   };
 
   const fetchRecentGames = async (TeamId) => {
@@ -149,127 +187,11 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
     setValue(newValue);
   };
 
-  const fetchStats = async (playerId, firstName, lastName) => {
-    const today = new Date();
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - 30); // Subtract 25 days
-    const formattedStartDate = startDate.toISOString().split('T')[0]; // Format the start date
-    const formattedTodayDate = today.toISOString().split('T')[0];
-
-    const response = await api.nba.getStats({ 
-      player_ids: [playerId],
-      start_date: formattedStartDate, // Adjust start date
-      end_date: formattedTodayDate,   // Adjust end date to today's date
-     });
-
-    const fetchPlayerLines = await fetchLines(firstName, lastName);
-
-    let games2023 = await api.nba.getStats({
-      player_ids: [playerId],
-      seasons: [2023],
-      per_page: 100,
-     });
-    games2023 = games2023.data.filter((game) => game.min > 25);
-    const numTotalGames2023 = games2023.length;
-    const ptsHR2023 = games2023.filter((game) => game.pts >= playerLines.points);
-    const astHR2023 = games2023.filter((game) => game.ast >= playerLines.assists);
-    const rebHR2023 = games2023.filter((game) => game.reb >= playerLines.rebounds);
-    
-    sethitRate2023({
-      points: Math.round(ptsHR2023.length*100/numTotalGames2023),
-      assists: Math.round(astHR2023.length*100/numTotalGames2023),
-      rebounds: Math.round(rebHR2023.length*100/numTotalGames2023),
-    });
-
-    let games2024 = await api.nba.getStats({
-      player_ids: [playerId],
-      seasons: [2024],
-      per_page: 100,
-     });
-    games2024 = games2024.data.filter((game) => game.min > 25);
-    const numTotalGames2024 = games2024.length;
-    console.log("test11 ", games2024);
-    const ptsHR2024 = games2024.filter((game) => game.pts >= playerLines.points);
-    const astHR2024 = games2024.filter((game) => game.ast >= playerLines.assists);
-    const rebHR2024 = games2024.filter((game) => game.reb >= playerLines.rebounds);
-    console.log("test22 ", ptsHR2024, playerLines.points);
-    console.log("test33 ", ptsHR2024.length*100/numTotalGames2024);
-
-    sethitRate2024({
-      points: Math.round(ptsHR2024.length*100/numTotalGames2024),
-      assists: Math.round(astHR2024.length*100/numTotalGames2024),
-      rebounds: Math.round(rebHR2024.length*100/numTotalGames2024),
-    });
-
-
-
-    console.log(firstName, " ", lastName, " 2023 games ", games2023);
-
-    console.log(firstName, " ", lastName, " 2024 games ", games2024);
-
-    console.log("fetch lines for selected player: ", fetchPlayerLines);
-
-    const stats = response.data.reduce((acc, curr) => {
-      if (curr.min === '00') {
-        // Skip stats where the player didn't play
-        return acc;
-      }
-      const date = new Date(curr.game.date).getTime();
-      const index = acc.findIndex(item => new Date(item.game.date).getTime() < date);
-      if (index === -1) {
-        acc.push(curr);
-      } else {
-        acc.splice(index, 0, curr);
-      }
-      return acc;
-    }, []);
-
-    let last10Stats = stats.slice(0, 10);
-    console.log("last 10 games: ", last10Stats);
-    const last10StatsLen = last10Stats.length;
-    const last10PHR = last10Stats.filter((game) => game.pts >= playerLines.points);
-    const last10AHR = last10Stats.filter((game) => game.ast >= playerLines.assists);
-    const last10RHR = last10Stats.filter((game) => game.reb >= playerLines.rebounds);
-    setAveragesL10({
-      points: Math.round(last10PHR.length/last10StatsLen*100),
-      assists: Math.round(last10AHR.length/last10StatsLen*100),
-      rebounds: Math.round(last10RHR.length/last10StatsLen*100),
-    });
-
-    const last5Stats = stats.slice(0, 5);
-    console.log("last 5 games: ", last5Stats)
-    const last5StatsLen = last5Stats.length;
-    const last5PHR = last5Stats.filter((game) => game.pts >= playerLines.points);
-    const last5AHR = last5Stats.filter((game) => game.ast >= playerLines.assists);
-    const last5RHR = last5Stats.filter((game) => game.reb >= playerLines.rebounds);
-    setAveragesL5({
-      points: Math.round(last5PHR.length/last5StatsLen*100),
-      assists: Math.round(last5AHR.length/last5StatsLen*100),
-      rebounds: Math.round(last5RHR.length/last5StatsLen*100),
-    });
-
-      setStatsArray(Object.values(stats));
-      setPlayerStats(statsArray.slice(0, 10));
-  };
-
   useEffect(() => {
     fetchRoster(GameId);
     fetchRecentGames(homeTeamId);
     fetchRecentGames(awayTeamId);
-    fetchLines();
-  }, [GameId], [homeTeam], [awayTeam]);
-
-  const HtmlTooltip = styled(({ className, ...props }) => (
-    <Tooltip {...props} classes={{ popper: className }} />
-  ))(({ theme }) => ({
-    [`& .${tooltipClasses.tooltip}`]: {
-      backgroundColor: '#f5f5f9',
-      color: 'rgba(0, 0, 0, 0.87)',
-      maxWidth: 400,
-      fontSize: theme.typography.pxToRem(12),
-      border: '1px solid #dadde9',
-    },
-  }));
+  }, [GameId, homeTeam, awayTeam]);
 
   if (!homeTeamRoster || !awayTeamRoster) {
     return <p>Loading player data...</p>;
@@ -343,192 +265,39 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           <TabPanel value="3">
             {/* Start of home team roster */}
             {homeTeamRoster.length > 0 ? (
-            <table>
-              <thead>
-                <tr>
-                  <th>Position</th>
-                  <th>Name</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Forward</td>
-                  {homeTeamRoster && homeTeamRoster.filter(player => player.position.includes("F")).map(player => (
-                    
-                  <td>
-                    <td key={player.id}>
-                    <HtmlTooltip
-                      title={
-                        <React.Fragment>
-                          <Typography color="inherit">Last 10 Game Stats</Typography>
-                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, _index) => (
-                          <tr key={stats.id}>
-                          </tr>
-                        ))}
-                        {/* Print L10 averages */}
-                        <tr>
-                          <td><b>L10 Averages:</b></td>
-                          <td>{`Points Hit Rate: ${averagesL10.points}`}</td>
-                          <td>{`Assists Hit Rate: ${averagesL10.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${averagesL10.rebounds}`}</td>
-                        </tr>
-                        {/* Print L5 averages */}
-                        <tr>
-                          <td><b>L5 Averages:</b></td>
-                          <td>{`Points Hit Rate: ${averagesL5.points}`}</td>
-                          <td>{`Assists Hit Rate: ${averagesL5.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${averagesL5.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2023 averages */}
-                        <tr>
-                          <td><b>2023 Averages:</b></td>
-                          <td>{`Points Hit Rate: ${hitRate2023.points}`}</td>
-                          <td>{`Assists Hit Rate: ${hitRate2023.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${hitRate2023.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2024 averages */}
-                        <tr>
-                          <td><b>2024 Averages:</b></td>
-                          <td>{`Points Hit Rate: ${hitRate2024.points}`}</td>
-                          <td>{`Assists Hit Rate: ${hitRate2024.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${hitRate2024.rebounds}`}</td>
-                        </tr>
-                        {/* Print Over/Under Lines */}
-                        <tr>
-                          <td><b>Over/Under Lines:</b></td>
-                          <td>{`Points Hit Rate: ${playerLines.points}`}</td>
-                          <td>{`Assists Hit Rate: ${playerLines.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${playerLines.rebounds}`}</td>
-                        </tr>
-                        </React.Fragment>
-                      }>
-                      <Button onClick={() => fetchStats(player.id, player.first_name, player.last_name)}>
-                        {player.first_name} {player.last_name}
-                      </Button>
-                    </HtmlTooltip>
-                    </td>
-                  </td>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Position</th>
+                    <th>Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {['F','G','C'].map(pos => (
+                    <tr key={pos}>
+                      <td>{pos === 'F' ? 'Forward' : pos === 'G' ? 'Guard' : 'Center'}</td>
+                      {homeTeamRoster.filter(player => player.position.includes(pos)).map(player => (
+                        <td key={player.id} style={{ padding: '10px', borderRight: '1px solid #ddd' }}>
+                          <div><b>{player.first_name} {player.last_name}</b></div>
+                          {playersInfo[player.id] ? (
+                            <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                              <div>{`L10 - P: ${playersInfo[player.id].averagesL10.points} A: ${playersInfo[player.id].averagesL10.assists} R: ${playersInfo[player.id].averagesL10.rebounds}`}</div>
+                              <div>{`L5  - P: ${playersInfo[player.id].averagesL5.points} A: ${playersInfo[player.id].averagesL5.assists} R: ${playersInfo[player.id].averagesL5.rebounds}`}</div>
+                              <div>{`2023 - P: ${playersInfo[player.id].hitRate2023.points} A: ${playersInfo[player.id].hitRate2023.assists} R: ${playersInfo[player.id].hitRate2023.rebounds}`}</div>
+                              <div>{`2024 - P: ${playersInfo[player.id].hitRate2024.points} A: ${playersInfo[player.id].hitRate2024.assists} R: ${playersInfo[player.id].hitRate2024.rebounds}`}</div>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '12px', marginTop: '5px', color: '#999', fontStyle: 'italic' }}>Loading...</div>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-                <tr>
-                  <td>Guard</td>
-                  {homeTeamRoster && homeTeamRoster.filter(player => player.position.includes("G")).map(player => (
-                <td>
-                  <td key={player.id}>
-                  <HtmlTooltip
-                      title={
-                        <React.Fragment>
-                          <Typography color="inherit">Last 10 Game Averages</Typography>
-                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, _index) => (
-                          <tr key={stats.id}>
-                          </tr>
-                        ))}
-                          {/* Print L10 averages */}
-                          <tr>
-                            <td><b>L10 Averages:</b></td>
-                            <td>{`Points Hit Rate: ${averagesL10.points}`}</td>
-                            <td>{`Assists Hit Rate: ${averagesL10.assists}`}</td>
-                            <td>{`Rebounds Hit Rate: ${averagesL10.rebounds}`}</td>
-                        </tr>
-                        {/* Print L5 averages */}
-                        <tr>
-                          <td><b>L5 Averages:</b></td>
-                          <td>{`Points Hit Rate: ${averagesL5.points}`}</td>
-                          <td>{`Assists Hit Rate: ${averagesL5.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${averagesL5.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2023 averages */}
-                        <tr>
-                          <td><b>2023 Averages:</b></td>
-                          <td>{`Points Hit Rate: ${hitRate2023.points}`}</td>
-                          <td>{`Assists Hit Rate: ${hitRate2023.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${hitRate2023.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2024 averages */}
-                        <tr>
-                          <td><b>2024 Averages:</b></td>
-                          <td>{`Points Hit Rate: ${hitRate2024.points}`}</td>
-                          <td>{`Assists Hit Rate: ${hitRate2024.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${hitRate2024.rebounds}`}</td>
-                        </tr>
-                        {/* Print Over/Under Lines */}
-                        <tr>
-                          <td><b>Over/Under Lines:</b></td>
-                          <td>{`Points Hit Rate: ${playerLines.points}`}</td>
-                          <td>{`Assists Hit Rate: ${playerLines.assists}`}</td>
-                          <td>{`Rebounds Hit Rate: ${playerLines.rebounds}`}</td>
-                        </tr>
-                        </React.Fragment>
-                      }>
-                      <Button onClick={() => fetchStats(player.id, player.first_name, player.last_name)}>
-                        {player.first_name} {player.last_name}
-                      </Button>
-                    </HtmlTooltip>
-                  </td>
-              </td>
-              ))}
-            </tr>
-            <tr>
-              <td>Center</td>
-              {homeTeamRoster && homeTeamRoster.filter(player => player.position.includes("C")).map(player => (
-                <td key={player.id}>
-                    <HtmlTooltip
-                      title={
-                        <React.Fragment>
-                          <Typography color="inherit">Last 10 Game Averages</Typography>
-                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, _index) => (
-                          <tr key={stats.id}>
-                          </tr>
-                        ))}
-                        {/* Print L10 averages */}
-                          <tr>
-                            <td><b>L10 Averages:</b></td>
-                            <td>{`Points: ${averagesL10.points}`}</td>
-                            <td>{`Assists: ${averagesL10.assists}`}</td>
-                            <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                          </tr>
-                        {/* Print L5 averages */}
-                        <tr>
-                          <td><b>L5 Averages:</b></td>
-                          <td>{`Points: ${averagesL5.points}`}</td>
-                          <td>{`Assists: ${averagesL5.assists}`}</td>
-                          <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2023 averages */}
-                        <tr>
-                          <td><b>2023 Averages:</b></td>
-                          <td>{`Points: ${hitRate2023.points}`}</td>
-                          <td>{`Assists: ${hitRate2023.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2024 averages */}
-                        <tr>
-                          <td><b>2024 Averages:</b></td>
-                          <td>{`Points: ${hitRate2024.points}`}</td>
-                          <td>{`Assists: ${hitRate2024.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                        </tr>
-                        {/* Print Over/Under Lines */}
-                        <tr>
-                          <td><b>Over/Under Lines:</b></td>
-                          <td>{`Points: ${playerLines.points}`}</td>
-                          <td>{`Assists: ${playerLines.assists}`}</td>
-                          <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                        </tr>
-                        </React.Fragment>
-                      }>
-                      <Button onClick={() => fetchStats(player.id, player.first_name, player.last_name)}>
-                        {player.first_name} {player.last_name}
-                      </Button>
-                    </HtmlTooltip>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-        ) : (
-          <p>Home Team Roster Loading...</p>
-        )}
+                </tbody>
+              </table>
+            ) : (
+              <p>Home Team Roster Loading...</p>
+            )}
           </TabPanel>
         </TabContext>
       </Box> 
@@ -599,189 +368,41 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
           )}
           </TabPanel>
           <TabPanel value="3">
-            {/* Start of home team roster */}
+            {/* Start of away team roster */}
             {awayTeamRoster.length > 0 ? (
-            <table>
-            <thead>
-              <tr>
-                <th>Position</th>
-                <th>Name</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Forward</td>
-                {awayTeamRoster && awayTeamRoster.filter(player => player.position.includes("F")).map(player => (
-                  <td key={player.id}>
-                    <HtmlTooltip
-                      title={
-                        <React.Fragment>
-                          <Typography color="inherit">Last 10 Game Averages</Typography>
-                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, _index) => (
-                          <tr key={stats.id}>
-                          </tr>
-                        ))}
-                          {/* Print L10 averages */}
-                          <tr>
-                            <td><b>L10 Averages:</b></td>
-                            <td>{`Points: ${averagesL10.points}`}</td>
-                            <td>{`Assists: ${averagesL10.assists}`}</td>
-                            <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                          </tr>
-                        {/* Print L5 averages */}
-                        <tr>
-                          <td><b>L5 Averages:</b></td>
-                          <td>{`Points: ${averagesL5.points}`}</td>
-                          <td>{`Assists: ${averagesL5.assists}`}</td>
-                          <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2023 averages */}
-                        <tr>
-                          <td><b>2023 Averages:</b></td>
-                          <td>{`Points: ${hitRate2023.points}`}</td>
-                          <td>{`Assists: ${hitRate2023.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2024 averages */}
-                        <tr>
-                          <td><b>2024 Averages:</b></td>
-                          <td>{`Points: ${hitRate2024.points}`}</td>
-                          <td>{`Assists: ${hitRate2024.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                        </tr>
-                        {/* Print Over/Under Lines */}
-                        <tr>
-                          <td><b>Over/Under Lines:</b></td>
-                          <td>{`Points: ${playerLines.points}`}</td>
-                          <td>{`Assists: ${playerLines.assists}`}</td>
-                          <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                        </tr>
-                        </React.Fragment>
-                      }>
-                      <Button onClick={() => fetchStats(player.id, player.first_name, player.last_name)}>
-                        {player.first_name} {player.last_name}
-                      </Button>
-                    </HtmlTooltip>
-                  </td>
-                ))}
-              </tr>
-              <tr>
-                <td>Guard</td>
-                {awayTeamRoster && awayTeamRoster.filter(player => player.position.includes("G")).map(player => (
-                  <td key={player.id}>
-                    <HtmlTooltip
-                      title={
-                        <React.Fragment>
-                          <Typography color="inherit">Last 10 Game Averages</Typography>
-                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, _index) => (
-                          <tr key={stats.id}>
-                          </tr>
-                        ))}
-                          {/* Print L10 averages */}
-                          <tr>
-                            <td><b>L10 Averages:</b></td>
-                            <td>{`Points: ${averagesL10.points}`}</td>
-                            <td>{`Assists: ${averagesL10.assists}`}</td>
-                            <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                          </tr>
-                        {/* Print L5 averages */}
-                        <tr>
-                          <td><b>L5 Averages:</b></td>
-                          <td>{`Points: ${averagesL5.points}`}</td>
-                          <td>{`Assists: ${averagesL5.assists}`}</td>
-                          <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2023 averages */}
-                        <tr>
-                          <td><b>2023 Averages:</b></td>
-                          <td>{`Points: ${hitRate2023.points}`}</td>
-                          <td>{`Assists: ${hitRate2023.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2024 averages */}
-                        <tr>
-                          <td><b>2024 Averages:</b></td>
-                          <td>{`Points: ${hitRate2024.points}`}</td>
-                          <td>{`Assists: ${hitRate2024.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                        </tr>
-                        {/* Print Over/Under Lines */}
-                        <tr>
-                          <td><b>Over/Under Lines:</b></td>
-                          <td>{`Points: ${playerLines.points}`}</td>
-                          <td>{`Assists: ${playerLines.assists}`}</td>
-                          <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                        </tr>
-                        </React.Fragment>
-                      }>
-                      <Button onClick={() => fetchStats(player.id, player.first_name, player.last_name)}>
-                        {player.first_name} {player.last_name}
-                      </Button>
-                    </HtmlTooltip>
-                </td>
-                ))}
-              </tr>
-              <tr>
-                <td>Center</td>
-                {awayTeamRoster && awayTeamRoster.filter(player => player.position.includes("C")).map(player => (
-                  <td key={player.id}>
-                    <HtmlTooltip
-                      title={
-                        <React.Fragment>
-                          <Typography color="inherit">Last 10 Game Averages</Typography>
-                          {Array.isArray(playerStats) && playerStats.slice(playerStats.length-10, playerStats.length).map((stats, _index) => (
-                          <tr key={stats.id}>
-                          </tr>
-                        ))}
-                          {/* Print L10 averages */}
-                          <tr>
-                            <td><b>L10 Averages:</b></td>
-                            <td>{`Points: ${averagesL10.points}`}</td>
-                            <td>{`Assists: ${averagesL10.assists}`}</td>
-                            <td>{`Rebounds: ${averagesL10.rebounds}`}</td>
-                          </tr>
-                        {/* Print L5 averages */}
-                        <tr>
-                          <td><b>L5 Averages:</b></td>
-                          <td>{`Points: ${averagesL5.points}`}</td>
-                          <td>{`Assists: ${averagesL5.assists}`}</td>
-                          <td>{`Rebounds: ${averagesL5.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2023 averages */}
-                        <tr>
-                          <td><b>2023 Averages:</b></td>
-                          <td>{`Points: ${hitRate2023.points}`}</td>
-                          <td>{`Assists: ${hitRate2023.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2023.rebounds}`}</td>
-                        </tr>
-                        {/* Print 2024 averages */}
-                        <tr>
-                          <td><b>2024 Averages:</b></td>
-                          <td>{`Points: ${hitRate2024.points}`}</td>
-                          <td>{`Assists: ${hitRate2024.assists}`}</td>
-                          <td>{`Rebounds: ${hitRate2024.rebounds}`}</td>
-                        </tr>
-                        {/* Print Over/Under Lines */}
-                        <tr>
-                          <td><b>Over/Under Lines:</b></td>
-                          <td>{`Points: ${playerLines.points}`}</td>
-                          <td>{`Assists: ${playerLines.assists}`}</td>
-                          <td>{`Rebounds: ${playerLines.rebounds}`}</td>
-                        </tr>
-                        </React.Fragment>
-                      }>
-                      <Button onClick={() => fetchStats(player.id, player.first_name, player.last_name)}>
-                        {player.first_name} {player.last_name}
-                      </Button>
-                    </HtmlTooltip>
-                </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-          ) : (
-            <p>Away Team Roster Loading...</p>
-          )}
+              <table>
+                <thead>
+                  <tr>
+                    <th>Position</th>
+                    <th>Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {['F','G','C'].map(pos => (
+                    <tr key={pos}>
+                      <td>{pos === 'F' ? 'Forward' : pos === 'G' ? 'Guard' : 'Center'}</td>
+                      {awayTeamRoster.filter(player => player.position.includes(pos)).map(player => (
+                        <td key={player.id} style={{ padding: '10px', borderRight: '1px solid #ddd' }}>
+                          <div><b>{player.first_name} {player.last_name}</b></div>
+                          {playersInfo[player.id] ? (
+                            <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                              <div>{`L10 - P: ${playersInfo[player.id].averagesL10.points} A: ${playersInfo[player.id].averagesL10.assists} R: ${playersInfo[player.id].averagesL10.rebounds}`}</div>
+                              <div>{`L5  - P: ${playersInfo[player.id].averagesL5.points} A: ${playersInfo[player.id].averagesL5.assists} R: ${playersInfo[player.id].averagesL5.rebounds}`}</div>
+                              <div>{`2023 - P: ${playersInfo[player.id].hitRate2023.points} A: ${playersInfo[player.id].hitRate2023.assists} R: ${playersInfo[player.id].hitRate2023.rebounds}`}</div>
+                              <div>{`2024 - P: ${playersInfo[player.id].hitRate2024.points} A: ${playersInfo[player.id].hitRate2024.assists} R: ${playersInfo[player.id].hitRate2024.rebounds}`}</div>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '12px', marginTop: '5px', color: '#999', fontStyle: 'italic' }}>Loading...</div>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>Away Team Roster Loading...</p>
+            )}
           </TabPanel>
         </TabContext>
       </Box>

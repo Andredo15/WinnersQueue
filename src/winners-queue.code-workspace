@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../Python Scripting"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "Valentines"
+	}
+}
