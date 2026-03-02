@@ -25,17 +25,30 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
   const [value, setValue] = React.useState('1');
 
   // Throttled fetch to avoid overwhelming API
-  const fetchPlayerInfoThrottled = async (players, delayMs = 100) => {
+  const fetchPlayerInfoThrottled = async (players, delayMs = 1000) => {
     console.log(`Starting to fetch ${players.length} players with ${delayMs}ms delay`);
     const results = [];
+
     for (let i = 0; i < players.length; i++) {
       const player = players[i];
-      console.log(`[${i + 1}/${players.length}] Fetching player ${player.id} - ${player.first_name} ${player.last_name}`);
-      await fetchPlayerInfo(player);
+      console.log(`[${i + 1}/${players.length}] Fetching player ${player.id}`);
+      try {
+        const info = await fetchPlayerInfo(player);
+        if (!info) {
+          setPlayersInfo(prev => ({ ...prev, [player.id]: { error: true } }));
+        }
+        results.push(info);
+      } catch (err) {
+        console.error(`Throttled fetch failed for player ${player.id}:`, err);
+        setPlayersInfo(prev => ({ ...prev, [player.id]: { error: true } }));
+        results.push(null);
+      }
+
       if (i < players.length - 1) {
         await new Promise(r => setTimeout(r, delayMs));
       }
     }
+
     console.log(`Finished fetching ${players.length} players`);
     return results;
   };
@@ -43,6 +56,10 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
   const fetchRoster = async (GameId) => {
     try {
       console.log('fetchRoster started for GameId:', GameId);
+
+      // whenever we start a new roster fetch we also clear any previous player info
+      setPlayersInfo({});
+
       const homeTeamId = (await api.nba.getGame(GameId)).data.home_team.id;
       const awayTeamId = (await api.nba.getGame(GameId)).data.visitor_team.id;
       console.log('Team IDs retrieved:', { homeTeamId, awayTeamId });
@@ -58,15 +75,16 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
       
       // Fetch stats with throttling to avoid API rate limits
       console.log('Starting stats fetch for home team');
-      fetchPlayerInfoThrottled(homePlayers, 150).catch(e => console.error('Home team stats error:', e));
+      // awaiting allows us to catch unexpected errors, but we still handle them inside
+      await fetchPlayerInfoThrottled(homePlayers).catch(e => console.error('Home team stats error:', e));
       console.log('Starting stats fetch for away team');
-      fetchPlayerInfoThrottled(awayPlayers, 150).catch(e => console.error('Away team stats error:', e));
+      await fetchPlayerInfoThrottled(awayPlayers).catch(e => console.error('Away team stats error:', e));
     } catch (e) {
       console.error('Error in fetchRoster:', e.message);
     }
   };
 
-  const fetchPlayerInfo = async (player) => {
+  const fetchPlayerInfo = async (player, retries = 2) => {
     try {
       const playerId = player.id;
       const startTime = performance.now();
@@ -78,17 +96,22 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
       const formattedStartDate = startDate.toISOString().split('T')[0];
       const formattedTodayDate = today.toISOString().split('T')[0];
 
-      // Make all 3 API calls in parallel instead of sequentially
-      console.log(`[API] Player ${playerId}: Making 3 parallel API calls`);
-      const [response, games2023Res, games2024Res] = await Promise.all([
-        api.nba.getStats({
-          player_ids: [playerId],
-          start_date: formattedStartDate,
-          end_date: formattedTodayDate,
-        }),
-        api.nba.getStats({ player_ids: [playerId], seasons: [2023], per_page: 100 }),
-        api.nba.getStats({ player_ids: [playerId], seasons: [2024], per_page: 100 }),
-      ]);
+      // perform calls one at a time with a pause between each to avoid hitting rate limits
+      console.log(`[API] Player ${playerId}: Fetching main stats`);
+      const response = await api.nba.getStats({
+        player_ids: [playerId],
+        start_date: formattedStartDate,
+        end_date: formattedTodayDate,
+      });
+      await new Promise(r => setTimeout(r, 5000));
+      
+      console.log(`[API] Player ${playerId}: Fetching 2023 season stats`);
+      const games2023Res = await api.nba.getStats({ player_ids: [playerId], seasons: [2023], per_page: 100 });
+      await new Promise(r => setTimeout(r, 5000));
+      
+      console.log(`[API] Player ${playerId}: Fetching 2024 season stats`);
+      const games2024Res = await api.nba.getStats({ player_ids: [playerId], seasons: [2024], per_page: 100 });
+      await new Promise(r => setTimeout(r, 5000));
 
       let games2023 = (games2023Res.data || []).filter((g) => g.min > 25);
       const numTotalGames2023 = games2023.length;
@@ -135,6 +158,11 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
       setPlayersInfo(prev => ({ ...prev, [playerId]: info }));
       return info;
     } catch (e) {
+      if (e.code === 429 && retries > 0) {
+        // simple backoff when rate limited
+        await new Promise(r => setTimeout(r, 500));
+        return fetchPlayerInfo(player, retries - 1);
+      }
       console.error(`[API] Error fetching player ${player.id}: ${e.message} - ${e.code || 'unknown'}`);
       return null;
     }
@@ -280,12 +308,18 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                         <td key={player.id} style={{ padding: '10px', borderRight: '1px solid #ddd' }}>
                           <div><b>{player.first_name} {player.last_name}</b></div>
                           {playersInfo[player.id] ? (
-                            <div style={{ fontSize: '12px', marginTop: '5px' }}>
-                              <div>{`L10 - P: ${playersInfo[player.id].averagesL10.points} A: ${playersInfo[player.id].averagesL10.assists} R: ${playersInfo[player.id].averagesL10.rebounds}`}</div>
-                              <div>{`L5  - P: ${playersInfo[player.id].averagesL5.points} A: ${playersInfo[player.id].averagesL5.assists} R: ${playersInfo[player.id].averagesL5.rebounds}`}</div>
-                              <div>{`2023 - P: ${playersInfo[player.id].hitRate2023.points} A: ${playersInfo[player.id].hitRate2023.assists} R: ${playersInfo[player.id].hitRate2023.rebounds}`}</div>
-                              <div>{`2024 - P: ${playersInfo[player.id].hitRate2024.points} A: ${playersInfo[player.id].hitRate2024.assists} R: ${playersInfo[player.id].hitRate2024.rebounds}`}</div>
-                            </div>
+                            playersInfo[player.id].error ? (
+                              <div style={{ fontSize: '12px', marginTop: '5px', color: 'red', fontStyle: 'italic' }}>
+                                Stats unavailable
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                                <div>{`L10 - P: ${playersInfo[player.id].averagesL10.points} A: ${playersInfo[player.id].averagesL10.assists} R: ${playersInfo[player.id].averagesL10.rebounds}`}</div>
+                                <div>{`L5  - P: ${playersInfo[player.id].averagesL5.points} A: ${playersInfo[player.id].averagesL5.assists} R: ${playersInfo[player.id].averagesL5.rebounds}`}</div>
+                                <div>{`2023 - P: ${playersInfo[player.id].hitRate2023.points} A: ${playersInfo[player.id].hitRate2023.assists} R: ${playersInfo[player.id].hitRate2023.rebounds}`}</div>
+                                <div>{`2024 - P: ${playersInfo[player.id].hitRate2024.points} A: ${playersInfo[player.id].hitRate2024.assists} R: ${playersInfo[player.id].hitRate2024.rebounds}`}</div>
+                              </div>
+                            )
                           ) : (
                             <div style={{ fontSize: '12px', marginTop: '5px', color: '#999', fontStyle: 'italic' }}>Loading...</div>
                           )}
@@ -385,12 +419,18 @@ const GameStats = ({ GameId, homeTeam, awayTeam, homeTeamId, awayTeamId }) => {
                         <td key={player.id} style={{ padding: '10px', borderRight: '1px solid #ddd' }}>
                           <div><b>{player.first_name} {player.last_name}</b></div>
                           {playersInfo[player.id] ? (
-                            <div style={{ fontSize: '12px', marginTop: '5px' }}>
-                              <div>{`L10 - P: ${playersInfo[player.id].averagesL10.points} A: ${playersInfo[player.id].averagesL10.assists} R: ${playersInfo[player.id].averagesL10.rebounds}`}</div>
-                              <div>{`L5  - P: ${playersInfo[player.id].averagesL5.points} A: ${playersInfo[player.id].averagesL5.assists} R: ${playersInfo[player.id].averagesL5.rebounds}`}</div>
-                              <div>{`2023 - P: ${playersInfo[player.id].hitRate2023.points} A: ${playersInfo[player.id].hitRate2023.assists} R: ${playersInfo[player.id].hitRate2023.rebounds}`}</div>
-                              <div>{`2024 - P: ${playersInfo[player.id].hitRate2024.points} A: ${playersInfo[player.id].hitRate2024.assists} R: ${playersInfo[player.id].hitRate2024.rebounds}`}</div>
-                            </div>
+                            playersInfo[player.id].error ? (
+                              <div style={{ fontSize: '12px', marginTop: '5px', color: 'red', fontStyle: 'italic' }}>
+                                Stats unavailable
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                                <div>{`L10 - P: ${playersInfo[player.id].averagesL10.points} A: ${playersInfo[player.id].averagesL10.assists} R: ${playersInfo[player.id].averagesL10.rebounds}`}</div>
+                                <div>{`L5  - P: ${playersInfo[player.id].averagesL5.points} A: ${playersInfo[player.id].averagesL5.assists} R: ${playersInfo[player.id].averagesL5.rebounds}`}</div>
+                                <div>{`2023 - P: ${playersInfo[player.id].hitRate2023.points} A: ${playersInfo[player.id].hitRate2023.assists} R: ${playersInfo[player.id].hitRate2023.rebounds}`}</div>
+                                <div>{`2024 - P: ${playersInfo[player.id].hitRate2024.points} A: ${playersInfo[player.id].hitRate2024.assists} R: ${playersInfo[player.id].hitRate2024.rebounds}`}</div>
+                              </div>
+                            )
                           ) : (
                             <div style={{ fontSize: '12px', marginTop: '5px', color: '#999', fontStyle: 'italic' }}>Loading...</div>
                           )}
